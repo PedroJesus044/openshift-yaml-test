@@ -1,0 +1,98 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: owncloud-deployment
+  namespace: or15
+  labels:
+    app: owncloud-deployment
+    app.kubernetes.io/part-of: owncloud #Aquí se especifica la APP a donde pertenece
+spec:
+  selector:
+    matchLabels:
+      app: owncloud-deployment
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: owncloud-deployment
+    spec:
+      # initContainers:
+        # Init containers are exactly like regular containers, except:
+          # - Init containers always run to completion.
+          # - Each init container must complete successfully before the next one starts.
+      containers:
+      - name: owncloud-deployment
+        image: image-registry.openshift-image-registry.svc:5000/or15/owncloud-openshift-git@sha256:e9e941241f06f19aff0114d4c5acc8bfefca72b3221cd5eca1766bca95fd74f1
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        # livenessProbe:
+        #   tcpSocket:
+        #     port: 8080
+        #   initialDelaySeconds: 5
+        #   timeoutSeconds: 5
+        #   successThreshold: 1
+        #   failureThreshold: 3
+        #   periodSeconds: 10
+        # readinessProbe:
+        #   httpGet:
+        #     path: /_status/healthz
+        #     port: 8080
+        #   initialDelaySeconds: 5
+        #   timeoutSeconds: 2
+        #   successThreshold: 1
+        #   failureThreshold: 3
+        #   periodSeconds: 10
+        env:
+        - name: OWNCLOUD_ADMIN_PASSWORD
+          value: 4dm1n1str4d0r.
+        - name: OWNCLOUD_ADMIN_USERNAME
+          value: admin
+        - name: OWNCLOUD_DB_HOST
+          value: ownclouddb
+        - name: OWNCLOUD_DB_NAME
+          value: ownclouddb
+        - name: OWNCLOUD_DB_PASSWORD
+          value: ownclouddb
+        - name: OWNCLOUD_DB_TYPE
+          value: mysql
+        - name: OWNCLOUD_DB_USERNAME
+          value: ownclouddb
+        - name: OWNCLOUD_DOMAIN
+          value: owncloudpj.com
+        - name: OWNCLOUD_MYSQL_UTF8MB4
+          value: 'true'
+        - name: OWNCLOUD_TRUSTED_DOMAINS
+          value: owncloudpj.com
+        ports:
+        - containerPort: 8080
+          name: httpd
+      restartPolicy: Always
+---
+# https://kubernetes.io/docs/concepts/services-networking/service/
+apiVersion: v1
+kind: Service
+metadata:
+  name: owncloud-service
+  namespace: or15
+spec:
+  selector:
+    app: owncloud-deployment
+  type: ClusterIP
+  ports:
+  - name: owncloud-http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
